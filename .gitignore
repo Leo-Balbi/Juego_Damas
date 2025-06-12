@@ -1,0 +1,37 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+venv/
+Damas_venv/
+damas_venv/
+env/
+.venv/
+
+# Archivos de configuración de IDEs y editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de empaquetado y distribución
+*.egg-info/
+dist/
+build/
+
+# Archivos de logs y bases de datos
+*.log
+*.sqlite3
+
+# Archivos de Python específicos
+*.pyo
+*.pyd
+
+# Otros
+*.pyc
