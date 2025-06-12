@@ -2,231 +2,137 @@ import pygame
 import sys
 import random
 
-# Constantes
 ANCHO, ALTO = 600, 600
 FILAS, COLUMNAS = 8, 8
 TAM_CASILLA = ANCHO // COLUMNAS
 
-# Colores actualizados
 BLANCO = (255, 255, 255)
-GRIS_CLARO = (200, 200, 200)
+GRIS = (160, 160, 160)
 NEGRO = (0, 0, 0)
 AMARILLO = (255, 255, 0)
 VERDE = (0, 255, 0)
 
-# Inicializar Pygame
 pygame.init()
 ventana = pygame.display.set_mode((ANCHO, ALTO))
-pygame.display.set_caption("Juego de Damas")
+pygame.display.set_caption("Damas")
 
-# Tablero y fichas
+# Tablero: 0 vacío, 1 jugador 1, 2 jugador 2, "D1" dama 1, "D2" dama 2
 tablero = [[0 for _ in range(COLUMNAS)] for _ in range(FILAS)]
 for fila in range(FILAS):
     for col in range(COLUMNAS):
         if (fila + col) % 2 != 0:
             if fila < 3:
-                tablero[fila][col] = 1  # Jugador 1 (amarillo)
+                tablero[fila][col] = 2
             elif fila > 4:
-                tablero[fila][col] = 2  # Jugador 2 (negro)
+                tablero[fila][col] = 1
 
-# Ficha seleccionada y jugador actual
-sel_fila, sel_col = 0, 1
 jugador = 1
-movimiento_multiple = False  # Para capturas múltiples
+seleccion = None
+movimientos_posibles = []
 
-def dibujar_ficha_3d(ventana, color_base, x, y, radio):
-    # Círculo base
-    pygame.draw.circle(ventana, color_base, (x, y), radio)
-    # Círculo de luz (más claro) para simular volumen
-    color_luz = tuple(min(255, c + 60) for c in color_base)
-    pygame.draw.circle(ventana, color_luz, (x - radio // 3, y - radio // 3), radio // 2)
+def es_dama(f):
+    return f == "D1" or f == "D2"
 
 def dibujar_tablero():
     for fila in range(FILAS):
         for col in range(COLUMNAS):
-            color = BLANCO if (fila + col) % 2 == 0 else GRIS_CLARO
+            color = BLANCO if (fila + col) % 2 == 0 else GRIS
             pygame.draw.rect(ventana, color, (col * TAM_CASILLA, fila * TAM_CASILLA, TAM_CASILLA, TAM_CASILLA))
-
             ficha = tablero[fila][col]
             if ficha != 0:
-                color_ficha = AMARILLO if ficha == 1 or ficha == "D1" else (NEGRO if ficha == 2 or ficha == "D2" else BLANCO)
-                x = col * TAM_CASILLA + TAM_CASILLA // 2
-                y = fila * TAM_CASILLA + TAM_CASILLA // 2
-                radio = TAM_CASILLA // 2 - 10
-                dibujar_ficha_3d(ventana, color_ficha, x, y, radio)
-                # Opcional: Dibujar símbolo de dama (por ejemplo, un círculo pequeño)
-                if ficha == "D1" or ficha == "D2":
-                    pygame.draw.circle(ventana, (255, 255, 255), (x, y), TAM_CASILLA // 6)
+                color_ficha = AMARILLO if ficha == 1 or ficha == "D1" else NEGRO
+                pygame.draw.circle(ventana, color_ficha,
+                                   (col * TAM_CASILLA + TAM_CASILLA // 2,
+                                    fila * TAM_CASILLA + TAM_CASILLA // 2),
+                                   TAM_CASILLA // 2 - 10)
+                if es_dama(ficha):
+                    pygame.draw.circle(ventana, BLANCO,
+                        (col * TAM_CASILLA + TAM_CASILLA // 2,
+                         fila * TAM_CASILLA + TAM_CASILLA // 2),
+                        TAM_CASILLA // 4, 2)
 
-    # Dibujar cursor
-    pygame.draw.rect(ventana, VERDE, (sel_col * TAM_CASILLA, sel_fila * TAM_CASILLA, TAM_CASILLA, TAM_CASILLA), 3)
+    if seleccion:
+        f, c = seleccion
+        pygame.draw.rect(ventana, VERDE, (c * TAM_CASILLA, f * TAM_CASILLA, TAM_CASILLA, TAM_CASILLA), 3)
+        for (f2, c2) in movimientos_posibles:
+            pygame.draw.circle(ventana, VERDE,
+                               (c2 * TAM_CASILLA + TAM_CASILLA // 2,
+                                f2 * TAM_CASILLA + TAM_CASILLA // 2),
+                               10)
 
-def es_dama(ficha):
-    return ficha == "D1" or ficha == "D2"
+def en_rango(f, c):
+    return 0 <= f < FILAS and 0 <= c < COLUMNAS
 
-def mover_ficha(d_fila, d_col):
-    global sel_fila, sel_col, jugador, movimiento_multiple
+def obtener_movimientos(f, c):
+    ficha = tablero[f][c]
+    if ficha == 0:
+        return []
 
-    ficha_sel = tablero[sel_fila][sel_col]
-    if ficha_sel == 0 or (ficha_sel != jugador and ficha_sel != f"D{jugador}"):
-        return
-
-    # Dama: movimiento libre en diagonal
-    if es_dama(ficha_sel):
-        pasos = 1
-        while True:
-            nueva_fila = sel_fila + pasos * d_fila
-            nueva_col = sel_col + pasos * d_col
-            if 0 <= nueva_fila < FILAS and 0 <= nueva_col < COLUMNAS:
-                if tablero[nueva_fila][nueva_col] == 0:
-                    # Movimiento libre
-                    ult_fila, ult_col = nueva_fila, nueva_col
-                    pasos += 1
-                else:
-                    break
-            else:
-                break
-        # Si hay al menos un movimiento posible
-        if pasos > 1:
-            tablero[ult_fila][ult_col] = ficha_sel
-            tablero[sel_fila][sel_col] = 0
-            sel_fila, sel_col = ult_fila, ult_col
-            # No coronación, ya es dama
-            jugador = 2 if jugador == 1 else 1
-            movimiento_multiple = False
-            return
-
-        # Captura múltiple de dama
-        pasos = 1
-        while True:
-            mid_fila = sel_fila + pasos * d_fila
-            mid_col = sel_col + pasos * d_col
-            next_fila = sel_fila + (pasos + 1) * d_fila
-            next_col = sel_col + (pasos + 1) * d_col
-            if (0 <= mid_fila < FILAS and 0 <= mid_col < COLUMNAS and
-                0 <= next_fila < FILAS and 0 <= next_col < COLUMNAS):
-                mid_ficha = tablero[mid_fila][mid_col]
-                if mid_ficha != 0 and mid_ficha != ficha_sel and tablero[next_fila][next_col] == 0:
-                    # Comer
-                    tablero[next_fila][next_col] = ficha_sel
-                    tablero[sel_fila][sel_col] = 0
-                    tablero[mid_fila][mid_col] = 0
-                    sel_fila, sel_col = next_fila, next_col
-                    # Ver si puede seguir comiendo
-                    if puede_comer(sel_fila, sel_col, ficha_sel):
-                        movimiento_multiple = True
-                    else:
-                        jugador = 2 if jugador == 1 else 1
-                        movimiento_multiple = False
-                    return
-                elif mid_ficha == 0:
-                    pasos += 1
-                else:
-                    break
-            else:
-                break
-
-    # Pieza normal (no dama)
-    else:
-        nueva_fila = sel_fila + d_fila
-        nueva_col = sel_col + d_col
-        if 0 <= nueva_fila < FILAS and 0 <= nueva_col < COLUMNAS:
-            if tablero[nueva_fila][nueva_col] == 0:
-                # Movimiento normal (solo hacia adelante)
-                if (jugador == 1 and d_fila == 1) or (jugador == 2 and d_fila == -1):
-                    tablero[nueva_fila][nueva_col] = ficha_sel
-                    tablero[sel_fila][sel_col] = 0
-                    # Coronación
-                    if jugador == 1 and nueva_fila == 7:
-                        tablero[nueva_fila][nueva_col] = "D1"
-                    elif jugador == 2 and nueva_fila == 0:
-                        tablero[nueva_fila][nueva_col] = "D2"
-                    sel_fila, sel_col = nueva_fila, nueva_col
-                    jugador = 2 if jugador == 1 else 1
-                    movimiento_multiple = False
-            # Comer
-            elif (0 <= sel_fila + 2 * d_fila < FILAS and
-                  0 <= sel_col + 2 * d_col < COLUMNAS and
-                  tablero[nueva_fila][nueva_col] != 0 and
-                  tablero[nueva_fila][nueva_col] != ficha_sel and
-                  tablero[sel_fila + 2 * d_fila][sel_col + 2 * d_col] == 0):
-                tablero[sel_fila + 2 * d_fila][sel_col + 2 * d_col] = ficha_sel
-                tablero[sel_fila][sel_col] = 0
-                tablero[nueva_fila][nueva_col] = 0
-                nueva_fila = sel_fila + 2 * d_fila
-                nueva_col = sel_col + 2 * d_col
-                # Coronación después de comer
-                if jugador == 1 and nueva_fila == 7:
-                    tablero[nueva_fila][nueva_col] = "D1"
-                elif jugador == 2 and nueva_fila == 0:
-                    tablero[nueva_fila][nueva_col] = "D2"
-                sel_fila, sel_col = nueva_fila, nueva_col
-                # Ver si puede seguir comiendo
-                if puede_comer(sel_fila, sel_col, tablero[sel_fila][sel_col]):
-                    movimiento_multiple = True
-                else:
-                    jugador = 2 if jugador == 1 else 1
-                    movimiento_multiple = False
-
-def puede_comer(fila, col, ficha_sel):
+    movimientos = []
     direcciones = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
-    for d_fila, d_col in direcciones:
-        # Dama: puede saltar varias veces
-        if es_dama(ficha_sel):
-            pasos = 1
+    enemigo = [2, "D2"] if jugador == 1 else [1, "D1"]
+
+    if es_dama(ficha):
+        for df, dc in direcciones:
+            i = 1
             while True:
-                mid_fila = fila + pasos * d_fila
-                mid_col = col + pasos * d_col
-                next_fila = fila + (pasos + 1) * d_fila
-                next_col = col + (pasos + 1) * d_col
-                if (0 <= mid_fila < FILAS and 0 <= mid_col < COLUMNAS and
-                    0 <= next_fila < FILAS and 0 <= next_col < COLUMNAS):
-                    mid_ficha = tablero[mid_fila][mid_col]
-                    if mid_ficha != 0 and mid_ficha != ficha_sel and tablero[next_fila][next_col] == 0:
-                        return True
-                    elif mid_ficha == 0:
-                        pasos += 1
-                    else:
-                        break
+                nf, nc = f + df*i, c + dc*i
+                if not en_rango(nf, nc): break
+                if tablero[nf][nc] == 0:
+                    movimientos.append((nf, nc))
+                    i += 1
+                elif tablero[nf][nc] in enemigo:
+                    salto_f, salto_c = nf + df, nc + dc
+                    if en_rango(salto_f, salto_c) and tablero[salto_f][salto_c] == 0:
+                        movimientos.append((salto_f, salto_c))
+                    break
                 else:
                     break
-        else:
-            mid_fila = fila + d_fila
-            mid_col = col + d_col
-            next_fila = fila + 2 * d_fila
-            next_col = col + 2 * d_col
-            if (0 <= mid_fila < FILAS and 0 <= mid_col < COLUMNAS and
-                0 <= next_fila < FILAS and 0 <= next_col < COLUMNAS):
-                mid_ficha = tablero[mid_fila][mid_col]
-                if mid_ficha != 0 and mid_ficha != ficha_sel and tablero[next_fila][next_col] == 0:
-                    return True
-    return False
+    else:
+        avance = -1 if jugador == 2 else 1
+        for dc in [-1, 1]:
+            nf, nc = f + avance, c + dc
+            if en_rango(nf, nc) and tablero[nf][nc] == 0:
+                movimientos.append((nf, nc))
+            elif en_rango(nf, nc) and tablero[nf][nc] in enemigo:
+                salto_f, salto_c = nf + avance, nc + dc
+                if en_rango(salto_f, salto_c) and tablero[salto_f][salto_c] == 0:
+                    movimientos.append((salto_f, salto_c))
+    return movimientos
+
+def mover_ficha(f1, c1, f2, c2):
+    global jugador
+    ficha = tablero[f1][c1]
+    tablero[f2][c2] = ficha
+    tablero[f1][c1] = 0
+
+    if abs(f2 - f1) == 2:
+        mid_f = (f1 + f2) // 2
+        mid_c = (c1 + c2) // 2
+        tablero[mid_f][mid_c] = 0
+
+    # Coronación
+    if ficha == 1 and f2 == 0:
+        tablero[f2][c2] = "D1"
+    elif ficha == 2 and f2 == 7:
+        tablero[f2][c2] = "D2"
+
+    jugador = 2 if jugador == 1 else 1
 
 def hay_ganador():
-    jugador1_vive = any(1 in fila or "D1" in fila for fila in tablero)
-    jugador2_vive = any(2 in fila or "D2" in fila for fila in tablero)
-    if not jugador1_vive:
+    j1 = any(cell in [1, "D1"] for row in tablero for cell in row)
+    j2 = any(cell in [2, "D2"] for row in tablero for cell in row)
+    if not j1:
         return 2
-    if not jugador2_vive:
+    if not j2:
         return 1
     return None
 
-def mostrar_ganador(jugador):
-    ventana.fill((0, 0, 0))  # Fondo negro
-    fuente = pygame.font.SysFont("arial", 40, bold=True)
-
-    mensaje = f"🎆🎉 ¡Jugador {jugador} ha ganado! 🎉🎆"
-    texto = fuente.render(mensaje, True, (255, 215, 0))  # Dorado
-    ventana.blit(texto, (ANCHO // 2 - texto.get_width() // 2, ALTO // 2 - texto.get_height() // 2))
-
-    # Simulación de fuegos artificiales con círculos de colores
-    for _ in range(50):
-        x = random.randint(50, ANCHO - 50)
-        y = random.randint(50, ALTO - 50)
-        radio = random.randint(5, 20)
-        color = random.choice([(255, 0, 0), (0, 255, 0), (0, 150, 255), (255, 255, 0)])
-        pygame.draw.circle(ventana, color, (x, y), radio)
-
+def mostrar_ganador(j):
+    ventana.fill(NEGRO)
+    fuente = pygame.font.SysFont("arial", 36, bold=True)
+    texto = fuente.render(f"🎉 ¡Jugador {j} gana! 🎉", True, (255, 255, 0))
+    ventana.blit(texto, (ANCHO//2 - texto.get_width()//2, ALTO//2 - texto.get_height()//2))
     pygame.display.flip()
     pygame.time.wait(4000)
 
@@ -238,25 +144,33 @@ while ejecutando:
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             ejecutando = False
+        if evento.type == pygame.MOUSEBUTTONDOWN:
+            x, y = pygame.mouse.get_pos()
+            f, c = y // TAM_CASILLA, x // TAM_CASILLA
+            if seleccion:
+                if (f, c) in movimientos_posibles:
+                    mover_ficha(seleccion[0], seleccion[1], f, c)
+                    seleccion = None
+                elif tablero[f][c] != 0 and ((jugador == 1 and tablero[f][c] in [1, "D1"]) or
+                                             (jugador == 2 and tablero[f][c] in [2, "D2"])):
+                    seleccion = (f, c)
+                    movimientos_posibles = obtener_movimientos(f, c)
+                else:
+                    seleccion = None
+            else:
+                if tablero[f][c] != 0 and ((jugador == 1 and tablero[f][c] in [1, "D1"]) or
+                                           (jugador == 2 and tablero[f][c] in [2, "D2"])):
+                    seleccion = (f, c)
+                    movimientos_posibles = obtener_movimientos(f, c)
 
-        if evento.type == pygame.KEYDOWN:
-            # Controles con teclado numérico (sin Num Lock)
-            if evento.key == pygame.K_KP7:  # Arriba izquierda
-                mover_ficha(-1, -1)
-            elif evento.key == pygame.K_KP9:  # Arriba derecha
-                mover_ficha(-1, 1)
-            elif evento.key == pygame.K_KP1:  # Abajo izquierda
-                mover_ficha(1, -1)
-            elif evento.key == pygame.K_KP3:  # Abajo derecha
-                mover_ficha(1, 1)
-
-    ganador = hay_ganador()
-    if ganador is not None:
-        mostrar_ganador(ganador)
-        ejecutando = False
-
+    ventana.fill((0, 0, 0))
     dibujar_tablero()
     pygame.display.flip()
+
+    ganador = hay_ganador()
+    if ganador:
+        mostrar_ganador(ganador)
+        ejecutando = False
 
 pygame.quit()
 sys.exit()
