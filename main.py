@@ -63,6 +63,8 @@ def dibujar_tablero():
 def en_rango(f, c):
     return 0 <= f < FILAS and 0 <= c < COLUMNAS
 
+# Reemplaza todo el bloque "obtener_movimientos" por este corregido:
+
 def obtener_movimientos(f, c):
     ficha = tablero[f][c]
     if ficha == 0:
@@ -74,13 +76,10 @@ def obtener_movimientos(f, c):
 
     if es_dama(ficha):
         for df, dc in direcciones:
-            i = 1
-            while True:
-                nf, nc = f + df*i, c + dc*i
-                if not en_rango(nf, nc): break
+            nf, nc = f + df, c + dc
+            while en_rango(nf, nc):
                 if tablero[nf][nc] == 0:
                     movimientos.append((nf, nc))
-                    i += 1
                 elif tablero[nf][nc] in enemigo:
                     salto_f, salto_c = nf + df, nc + dc
                     if en_rango(salto_f, salto_c) and tablero[salto_f][salto_c] == 0:
@@ -88,16 +87,19 @@ def obtener_movimientos(f, c):
                     break
                 else:
                     break
+                nf += df
+                nc += dc
     else:
-        avance = -1 if jugador == 2 else 1
+        avance = -1 if ficha == 1 else 1
         for dc in [-1, 1]:
             nf, nc = f + avance, c + dc
-            if en_rango(nf, nc) and tablero[nf][nc] == 0:
-                movimientos.append((nf, nc))
-            elif en_rango(nf, nc) and tablero[nf][nc] in enemigo:
-                salto_f, salto_c = nf + avance, nc + dc
-                if en_rango(salto_f, salto_c) and tablero[salto_f][salto_c] == 0:
-                    movimientos.append((salto_f, salto_c))
+            if en_rango(nf, nc):
+                if tablero[nf][nc] == 0:
+                    movimientos.append((nf, nc))
+                elif tablero[nf][nc] in enemigo:
+                    salto_f, salto_c = nf + avance, nc + dc
+                    if en_rango(salto_f, salto_c) and tablero[salto_f][salto_c] == 0:
+                        movimientos.append((salto_f, salto_c))
     return movimientos
 
 def mover_ficha(f1, c1, f2, c2):
@@ -144,24 +146,57 @@ while ejecutando:
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             ejecutando = False
-        if evento.type == pygame.MOUSEBUTTONDOWN:
-            x, y = pygame.mouse.get_pos()
-            f, c = y // TAM_CASILLA, x // TAM_CASILLA
+
+    if evento.type == pygame.MOUSEBUTTONDOWN:
+        x, y = pygame.mouse.get_pos()
+        f, c = y // TAM_CASILLA, x // TAM_CASILLA
+
+        if (f + c) % 2 == 0:
+            continue  # ignorar casillas blancas
+
+        casilla = tablero[f][c]
+
+        if seleccion:
+            # Si haces clic en una casilla válida para mover
+            if (f, c) in movimientos_posibles:
+                mover_ficha(seleccion[0], seleccion[1], f, c)
+                seleccion = None
+                movimientos_posibles = []
+            # Si haces clic en otra ficha tuya, cambia la selección
+            elif casilla != 0 and ((jugador == 1 and casilla in [1, "D1"]) or (jugador == 2 and casilla in [2, "D2"])):
+                seleccion = (f, c)
+                movimientos_posibles = obtener_movimientos(f, c)
+            else:
+                # Clic inválido, deselecciona
+                seleccion = None
+                movimientos_posibles = []
+        else:
+            # Selección inicial de ficha
+            if casilla != 0 and ((jugador == 1 and casilla in [1, "D1"]) or (jugador == 2 and casilla in [2, "D2"])):
+                seleccion = (f, c)
+                movimientos_posibles = obtener_movimientos(f, c)
+
+
             if seleccion:
+                # Si haces clic en una casilla válida para mover
                 if (f, c) in movimientos_posibles:
                     mover_ficha(seleccion[0], seleccion[1], f, c)
                     seleccion = None
-                elif tablero[f][c] != 0 and ((jugador == 1 and tablero[f][c] in [1, "D1"]) or
-                                             (jugador == 2 and tablero[f][c] in [2, "D2"])):
+                    movimientos_posibles = []
+                # Si haces clic en otra ficha tuya, cambia la selección
+                elif casilla != 0 and ((jugador == 1 and casilla in [1, "D1"]) or (jugador == 2 and casilla in [2, "D2"])):
                     seleccion = (f, c)
                     movimientos_posibles = obtener_movimientos(f, c)
                 else:
+                    # Clic inválido, deselecciona
                     seleccion = None
+                    movimientos_posibles = []
             else:
-                if tablero[f][c] != 0 and ((jugador == 1 and tablero[f][c] in [1, "D1"]) or
-                                           (jugador == 2 and tablero[f][c] in [2, "D2"])):
+                # Selección inicial de ficha
+                if casilla != 0 and ((jugador == 1 and casilla in [1, "D1"]) or (jugador == 2 and casilla in [2, "D2"])):
                     seleccion = (f, c)
                     movimientos_posibles = obtener_movimientos(f, c)
+
 
     ventana.fill((0, 0, 0))
     dibujar_tablero()
