@@ -1,0 +1,9 @@
+README.md
+setup.py
+juego_damas.egg-info/PKG-INFO
+juego_damas.egg-info/SOURCES.txt
+juego_damas.egg-info/dependency_links.txt
+juego_damas.egg-info/entry_points.txt
+juego_damas.egg-info/requires.txt
+juego_damas.egg-info/top_level.txt
+src/__init__.py
