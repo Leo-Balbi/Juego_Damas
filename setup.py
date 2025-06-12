@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+import setuptools
 
 setup(
     name="juego_damas",
