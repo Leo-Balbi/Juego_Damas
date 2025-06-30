@@ -31,21 +31,17 @@ Sigue estos pasos para instalar y ejecutar el juego en tu equipo:
 
 ### Pasos
 
-1. **Clona el repositorio:**
 
-git clone https://github.com/tu_usuario/Juego_Damas.git
-cd Juego_Damas
-
-2. **Crea un entorno virtual (opcional pero recomendado):**
+1. **Crea un entorno virtual (opcional pero recomendado):**
 
 python -m venv venv
 
-3. **Instala las dependencias:**
+2. **Instala las dependencias:**
 
 pip install pygame
 
 
-4. **Ejecuta el juego:**
+3. **Ejecuta el juego:**
 
 python main.py
 
@@ -135,7 +131,5 @@ GitHub: [Leo-Balbi](https://github.com/Leo-Balbi)
 
 ## 🎉 ¡Diviértete jugando y aprendiendo a programar con este proyecto clásico!
 
----
 
-*Este proyecto utiliza [Pygame](https://www.pygame.org/) y está bajo licencia MIT.*
 
